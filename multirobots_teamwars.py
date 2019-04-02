@@ -170,7 +170,7 @@ class AgentTypeA(object):
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-    teamname = "Equipe Alpha" # A modifier avec le nom de votre équipe
+    teamname = "Team Grenouille"
 
     def stepController(self):
     
@@ -180,18 +180,45 @@ class AgentTypeA(object):
 
         color( (0,255,0) )
         circle( *self.getRobot().get_centroid() , r = 22) # je dessine un rond bleu autour de ce robot
-
-        distGauche = self.getDistanceAtSensor(2) # renvoi une valeur normalisée entre 0 et 1
-        distDroite = self.getDistanceAtSensor(5) # renvoi une valeur normalisée entre 0 et 1
         
-        if distGauche < distDroite:
-            self.setRotationValue( +1 )
-        elif distGauche > distDroite:
-            self.setRotationValue( -1 )
-        else:
-            self.setRotationValue( 0 )
+        translation = 1
+        rotation = 0
+        stratégie = 2
+        
+        # Stratégie de base
+        if stratégie == 0 :
+            distGauche = self.getDistanceAtSensor(2) # renvoi une valeur normalisée entre 0 et 1
+            distDroite = self.getDistanceAtSensor(5) # renvoi une valeur normalisée entre 0 et 1
+            
+            if distGauche < distDroite:
+                rotation = 1
+            elif distGauche > distDroite:
+                rotation = - 1
+            else:
+                rotation = 0
 
-        self.setTranslationValue(1) # normalisé -1,+1
+            translation = 1
+        
+        # Parasite
+        elif stratégie == 1 :
+            for i in range(len(SensorBelt)):
+                if self.getObjectTypeAtSensor(i) == 2 and self.getRobotInfoAtSensor(i)['teamname'] != self.teamname :
+                    rotation += (self.getObjectTypeAtSensor(i) & 2)*SensorBelt[i]
+                else :
+                    rotation += self.getObjectTypeAtSensor(i)
+        # Anti-parasite
+        elif stratégie == 2 :
+            if self.getObjectTypeAtSensor(0) == 2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
+                translation = -1
+            else :
+                # évite les murs et les robots
+                for i in range(len(SensorBelt)):
+                        rotation += self.getObjectTypeAtSensor(i)
+
+
+        self.setRotationValue(rotation)
+        self.setTranslationValue(translation)
+        
         
 		# monitoring (optionnel - changer la valeur de verbose)
         if verbose == True:
@@ -305,18 +332,45 @@ class AgentTypeB(object):
 
         color( (0,0,255) )
         circle( *self.getRobot().get_centroid() , r = 22) # je dessine un rond bleu autour de ce robot
-
-        distGauche = self.getDistanceAtSensor(2) # renvoi une valeur normalisée entre 0 et 1
-        distDroite = self.getDistanceAtSensor(5) # renvoi une valeur normalisée entre 0 et 1
         
-        if distGauche < distDroite:
-            self.setRotationValue( +1 )
-        elif distGauche > distDroite:
-            self.setRotationValue( -1 )
-        else:
-            self.setRotationValue( 0 )
-
-        self.setTranslationValue(1) # normalisé -1,+1
+        translation = 1
+        rotation = 0
+        stratégie = 1
+        
+        # Stratégie de base
+        if stratégie == 0 :
+            distGauche = self.getDistanceAtSensor(2) # renvoi une valeur normalisée entre 0 et 1
+            distDroite = self.getDistanceAtSensor(5) # renvoi une valeur normalisée entre 0 et 1
+            
+            if distGauche < distDroite:
+                rotation = 1
+            elif distGauche > distDroite:
+                rotation = - 1
+            else:
+                rotation = 0
+            
+            translation = 1
+        
+        # Parasite
+        elif stratégie == 1 :
+            for i in range(len(SensorBelt)):
+                if self.getObjectTypeAtSensor(i) == 2 and self.getRobotInfoAtSensor(i)['teamname'] != self.teamname :
+                    rotation += (self.getObjectTypeAtSensor(i) & 2)*SensorBelt[i]
+                else :
+                    rotation += self.getObjectTypeAtSensor(i)
+        # Anti-parasite
+        elif stratégie == 2 :
+            if self.getObjectTypeAtSensor(0) == 2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
+                translation = -1
+            else :
+                # évite les murs et les robots
+                for i in range(len(SensorBelt)):
+                    if self.getObjectTypeAtSensor(i) == 1:
+                        rotation += self.getObjectTypeAtSensor(i)
+    
+    
+        self.setRotationValue(rotation)
+        self.setTranslationValue(translation)
         
 		# monitoring (optionnel - changer la valeur de verbose)
         if verbose == True:
