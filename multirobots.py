@@ -114,8 +114,23 @@ class Agent(object):
         # Attention:
         #   ces fonctions *programment* la commande motrice, mais *ne l'exécute pas*
         #   la dernière valeur allouée exécutée. Chaque fonction doit donc être appelé une seule fois.
-        self.setRotationValue( random()*2-1 )
-        self.setTranslationValue(1) # normalisé -1,+1
+        
+        translation = 1
+        rotation = 0
+        stratégie = 3
+        
+        if stratégie == 3 :
+            if self.getObjectTypeAtSensor(1) == 1 and self.getObjectTypeAtSensor(2) == 0:
+                rotation = -1
+            elif self.getObjectTypeAtSensor(6) == 1 and self.getObjectTypeAtSensor(5) == 0:
+                rotation = 1
+            else :
+                # Evite les murs et les robots
+                for i in range(len(SensorBelt)):
+                    rotation += self.getObjectTypeAtSensor(i)
+                        
+        self.setRotationValue(rotation)
+        self.setTranslationValue(translation)
 
         # monitoring - affiche diverses informations sur l'agent et ce qu'il voit.
         # pour ne pas surcharger l'affichage, je ne fais ca que pour le player 1

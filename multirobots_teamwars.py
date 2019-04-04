@@ -109,6 +109,17 @@ maxRotationSpeed = 5
 maxTranslationSpeed = 1
 SensorBelt = [-170,-80,-40,-20,+20,40,80,+170]  # angles en degres des senseurs
 
+'''
+    [0] = -170 # capteur arrière
+    [1] = -80 # capteur gauche
+    [2]  = -40 # capteur gauche avant
+    [3] = -20 # capteur gauche avant avant
+    [4] = +20 # capteur droit avant avant
+    [5] = +40 # capteur droit avant
+    [6] = +80 # capteur droit
+    [7] = +170 # capteur arrière
+'''
+
 screen_width=512 #512,768,... -- multiples de 32  
 screen_height=512 #512,768,... -- multiples de 32
 
@@ -183,7 +194,7 @@ class AgentTypeA(object):
         
         translation = 1
         rotation = 0
-        stratégie = 2
+        stratégie = 3
         
         # Stratégie de base
         if stratégie == 0 :
@@ -206,14 +217,30 @@ class AgentTypeA(object):
                     rotation += (self.getObjectTypeAtSensor(i) & 2)*SensorBelt[i]
                 else :
                     rotation += self.getObjectTypeAtSensor(i)
+    
         # Anti-parasite
         elif stratégie == 2 :
+            # Essaye de reculer si un robot adversaire se colle à lui
             if self.getObjectTypeAtSensor(0) == 2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
                 translation = -1
+                # Pour éviter de faire des agglutinements
+                if self.getObjectTypeAtSensor(7) == 2 and self.getRobotInfoAtSensor(0)['teamname'] == self.teamname :
+                    translation = 1
             else :
-                # évite les murs et les robots
+                # Evite les murs et les robots
                 for i in range(len(SensorBelt)):
                         rotation += self.getObjectTypeAtSensor(i)
+    
+        # Longe les murs
+        elif stratégie == 3 :
+            if self.getObjectTypeAtSensor(1) == 1 and self.getObjectTypeAtSensor(2) == 0:
+                rotation = -1
+            elif self.getObjectTypeAtSensor(6) == 1 and self.getObjectTypeAtSensor(5) == 0:
+                rotation = 1
+            else :
+                # Evite les murs et les robots
+                for i in range(len(SensorBelt)):
+                    rotation += self.getObjectTypeAtSensor(i)
 
 
         self.setRotationValue(rotation)
@@ -335,7 +362,7 @@ class AgentTypeB(object):
         
         translation = 1
         rotation = 0
-        stratégie = 1
+        stratégie = 0
         
         # Stratégie de base
         if stratégie == 0 :
