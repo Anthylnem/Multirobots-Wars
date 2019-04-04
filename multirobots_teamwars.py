@@ -118,6 +118,9 @@ SensorBelt = [-170,-80,-40,-20,+20,40,80,+170]  # angles en degres des senseurs
     [5] = +40 # capteur droit avant
     [6] = +80 # capteur droit
     [7] = +170 # capteur arrière
+
+    rotation : 1 sens aiguille montre
+                -1 sens inverse
 '''
 
 screen_width=512 #512,768,... -- multiples de 32  
@@ -194,8 +197,11 @@ class AgentTypeA(object):
         
         translation = 1
         rotation = 0
-        stratégie = 3
-        
+        stratégie = 4
+
+        '''if self.id == 0 or self.id == 1 :
+            stratégie = 1'''
+
         # Stratégie de base
         if stratégie == 0 :
             distGauche = self.getDistanceAtSensor(2) # renvoi une valeur normalisée entre 0 et 1
@@ -224,24 +230,43 @@ class AgentTypeA(object):
             if self.getObjectTypeAtSensor(0) == 2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
                 translation = -1
                 # Pour éviter de faire des agglutinements
-                if self.getObjectTypeAtSensor(7) == 2 and self.getRobotInfoAtSensor(0)['teamname'] == self.teamname :
+                if self.getObjectTypeAtSensor(7) == 2 and self.getRobotInfoAtSensor(7)['teamname'] == self.teamname :
                     translation = 1
             else :
                 # Evite les murs et les robots
                 for i in range(len(SensorBelt)):
                         rotation += self.getObjectTypeAtSensor(i)
     
-        # Longe les murs
+        # Longe les murs + anti-parasite
         elif stratégie == 3 :
-            if self.getObjectTypeAtSensor(1) == 1 and self.getObjectTypeAtSensor(2) == 0:
-                rotation = -1
+            # Essaye de reculer si un robot adversaire se colle à lui
+            if self.getObjectTypeAtSensor(0) == 2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
+                translation = -1
+                # Pour éviter de faire des agglutinements
+                if self.getObjectTypeAtSensor(7) == 2 and self.getRobotInfoAtSensor(7)['teamname'] == self.teamname :
+                    translation = 1
+            elif self.getObjectTypeAtSensor(3) == 2 and self.getRobotInfoAtSensor(3)['teamname'] == self.teamname :
+                    translation = -1
+                    rotation = 1
+            elif self.getObjectTypeAtSensor(1) == 1 and self.getObjectTypeAtSensor(2) == 0:
+                rotation = -0.25
             elif self.getObjectTypeAtSensor(6) == 1 and self.getObjectTypeAtSensor(5) == 0:
-                rotation = 1
+                rotation = 0.25
             else :
                 # Evite les murs et les robots
                 for i in range(len(SensorBelt)):
                     rotation += self.getObjectTypeAtSensor(i)
-
+        # Télé           
+        elif stratégie == 4 :
+            if self.getObjectTypeAtSensor(3) == 1 or self.getObjectTypeAtSensor(4) == 1 or self.getObjectTypeAtSensor(1) == 1 or self.getObjectTypeAtSensor(0) == 1 :
+                n = randint(1,4)
+                if n == 4 :
+                    translation = 1
+                    rotation = 1
+            else :
+                # Evite les murs et les robots
+                for i in range(len(SensorBelt)):
+                    rotation += self.getObjectTypeAtSensor(i)
 
         self.setRotationValue(rotation)
         self.setTranslationValue(translation)
@@ -293,10 +318,10 @@ class AgentTypeA(object):
 
     def setTranslationValue(self,value):
         if value > 1:
-            print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
+            #print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
             value = maxTranslationSpeed
         elif value < -1:
-            print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
+            #print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
             value = -maxTranslationSpeed
         else:
             value = value * maxTranslationSpeed
@@ -304,10 +329,10 @@ class AgentTypeA(object):
 
     def setRotationValue(self,value):
         if value > 1:
-            print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
+            #print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
             value = maxRotationSpeed
         elif value < -1:
-            print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
+            #print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
             value = -maxRotationSpeed
         else:
             value = value * maxRotationSpeed
@@ -357,7 +382,7 @@ class AgentTypeB(object):
 
     def stepController(self):
 
-        color( (0,0,255) )
+        color( (255,0,0) )
         circle( *self.getRobot().get_centroid() , r = 22) # je dessine un rond bleu autour de ce robot
         
         translation = 1
@@ -375,7 +400,7 @@ class AgentTypeB(object):
                 rotation = - 1
             else:
                 rotation = 0
-            
+
             translation = 1
         
         # Parasite
@@ -385,16 +410,51 @@ class AgentTypeB(object):
                     rotation += (self.getObjectTypeAtSensor(i) & 2)*SensorBelt[i]
                 else :
                     rotation += self.getObjectTypeAtSensor(i)
+    
         # Anti-parasite
         elif stratégie == 2 :
+            # Essaye de reculer si un robot adversaire se colle à lui
             if self.getObjectTypeAtSensor(0) == 2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
                 translation = -1
+                # Pour éviter de faire des agglutinements
+                if self.getObjectTypeAtSensor(7) == 2 and self.getRobotInfoAtSensor(7)['teamname'] == self.teamname :
+                    translation = 1
             else :
-                # évite les murs et les robots
+                # Evite les murs et les robots
                 for i in range(len(SensorBelt)):
-                    if self.getObjectTypeAtSensor(i) == 1:
                         rotation += self.getObjectTypeAtSensor(i)
     
+        #Longe les murs + anti-parasite
+        elif stratégie == 3 :
+            # Essaye de reculer si un robot adversaire se colle à lui
+            if self.getObjectTypeAtSensor(0) == 2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
+                translation = -1
+                # Pour éviter de faire des agglutinements
+                if self.getObjectTypeAtSensor(7) == 2 and self.getRobotInfoAtSensor(7)['teamname'] == self.teamname :
+                    translation = 1
+            elif self.getObjectTypeAtSensor(3) == 2 and self.getRobotInfoAtSensor(3)['teamname'] == self.teamname :
+                    translation = -1
+                    rotation = 1
+            elif self.getObjectTypeAtSensor(1) == 1 and self.getObjectTypeAtSensor(2) == 0:
+                rotation = -0.25
+            elif self.getObjectTypeAtSensor(6) == 1 and self.getObjectTypeAtSensor(5) == 0:
+                rotation = 0.25
+            else :
+                # Evite les murs et les robots
+                for i in range(len(SensorBelt)):
+                    rotation += self.getObjectTypeAtSensor(i)
+
+        # Télé           
+        elif stratégie == 4 :
+            if self.getObjectTypeAtSensor(3) == 1 or self.getObjectTypeAtSensor(4) == 1 or self.getObjectTypeAtSensor(1) == 1 or self.getObjectTypeAtSensor(0) == 1 :
+                n = randint(1,4)
+                if n == 4 :
+                    translation = 1
+                    rotation = 1
+            else :
+                # Evite les murs et les robots
+                for i in range(len(SensorBelt)):
+                    rotation += self.getObjectTypeAtSensor(i)
     
         self.setRotationValue(rotation)
         self.setTranslationValue(translation)
@@ -446,10 +506,10 @@ class AgentTypeB(object):
 
     def setTranslationValue(self,value):
         if value > 1:
-            print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
+            #print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
             value = maxTranslationSpeed
         elif value < -1:
-            print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
+            #print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
             value = -maxTranslationSpeed
         else:
             value = value * maxTranslationSpeed
@@ -457,10 +517,10 @@ class AgentTypeB(object):
 
     def setRotationValue(self,value):
         if value > 1:
-            print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
+            #print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
             value = maxRotationSpeed
         elif value < -1:
-            print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
+            #print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
             value = -maxRotationSpeed
         else:
             value = value * maxRotationSpeed
@@ -518,6 +578,13 @@ def setupArena1():
 def setupArena2():
     for i in range(0,8):
         addObstacle(row=i,col=7)
+    for i in range(8,16):
+        addObstacle(row=i,col=8)
+
+def setupArena3():
+    for i in range(0,7):
+        addObstacle(row=i,col=8)
+
     for i in range(8,16):
         addObstacle(row=i,col=8)
 
@@ -616,8 +683,10 @@ if arena == 0:
     setupArena0()
 elif arena == 1:
     setupArena1()
-else:
+elif arena == 2:
     setupArena2()
+else :
+    setupArena3()
 
 setupAgents()
 game.mainiteration()

@@ -55,9 +55,12 @@ from itertools import count
 game = Game()
 
 agents = []
+
+arena = 3
+
 screen_width=512 #512,768,... -- multiples de 32  
 screen_height=512 #512,768,... -- multiples de 32
-nbAgents = 10
+nbAgents = 1
 
 maxSensorDistance = 30              # utilisé localement.
 maxRotationSpeed = 5
@@ -117,17 +120,16 @@ class Agent(object):
         
         translation = 1
         rotation = 0
-        stratégie = 3
+        stratégie = 4
+
         
-        if stratégie == 3 :
-            if self.getObjectTypeAtSensor(1) == 1 and self.getObjectTypeAtSensor(2) == 0:
-                rotation = -1
-            elif self.getObjectTypeAtSensor(6) == 1 and self.getObjectTypeAtSensor(5) == 0:
-                rotation = 1
-            else :
-                # Evite les murs et les robots
-                for i in range(len(SensorBelt)):
-                    rotation += self.getObjectTypeAtSensor(i)
+           # Télé           
+        if stratégie == 4 :
+            if self.getObjectTypeAtSensor(3) == 1 or self.getObjectTypeAtSensor(4) == 1 or self.getObjectTypeAtSensor(1) == 1 or self.getObjectTypeAtSensor(0) == 1 :
+                n = randint(1,4)
+                if n == 4 :
+                    translation = 1
+                    rotation = 1
                         
         self.setRotationValue(rotation)
         self.setTranslationValue(translation)
@@ -147,6 +149,8 @@ class Agent(object):
                 print ("\t\tDistance  :",self.getDistanceAtSensor(i))
                 print ("\t\tType      :",self.getObjectTypeAtSensor(i)) # 0: rien, 1: mur ou bord, 2: robot
                 print ("\t\tRobot info:",self.getRobotInfoAtSensor(i)) # dict("id","centroid(x,y)","orientation") (si pas de robot: renvoi "None" et affiche un avertissement dans la console
+                print(rotation)
+                print(translation)
 
         return
 
@@ -232,7 +236,7 @@ def setupAgents():
     game.mainiteration()
 
 
-def setupArena():
+def setupArena0():
     for i in range(6,13):
         addObstacle(row=3,col=i)
     for i in range(3,10):
@@ -243,6 +247,13 @@ def setupArena():
     addObstacle(row=11,col=3)
     addObstacle(row=10,col=3)
     addObstacle(row=9,col=3)
+
+def setupArena3():
+    '''for i in range(0,7):
+        addObstacle(row=i,col=8)
+
+    for i in range(8,16):
+        addObstacle(row=i,col=8)'''
 
 def updateSensors():
     global sensors
@@ -292,7 +303,11 @@ game.auto_refresh = False # display will be updated only if game.mainiteration()
 game.frameskip = frameskip
 atexit.register(onExit)
 
-setupArena()
+if arena == 0:
+    setupArena0()
+elif arena == 3:
+    setupArena3()
+
 setupAgents()
 game.mainiteration()
 
