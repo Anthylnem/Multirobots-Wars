@@ -101,7 +101,7 @@ import atexit
 game = Game()
 agents = []
 
-arena = 0
+arena = 4
 
 nbAgents = 8 # doit être pair et inférieur a 32
 maxSensorDistance = 30              # utilisé localement.
@@ -197,7 +197,7 @@ class AgentTypeA(object):
         
         translation = 1
         rotation = 0
-        stratégie = 4
+        stratégie = 3
 
         '''if self.id == 0 or self.id == 1 :
             stratégie = 1'''
@@ -387,7 +387,7 @@ class AgentTypeB(object):
         
         translation = 1
         rotation = 0
-        stratégie = 0
+        stratégie = 1
         
         # Stratégie de base
         if stratégie == 0 :
@@ -588,6 +588,18 @@ def setupArena3():
     for i in range(8,16):
         addObstacle(row=i,col=8)
 
+def setupArena4():
+    for i in range(3,11):
+        addObstacle(row=3,col=i)
+    for i in range(3,11):
+        addObstacle(row=i,col=11)
+    for i in range(5,12):
+        addObstacle(row=11,col=i)
+    for i in range(5,12):
+        addObstacle(row=i,col=5)
+    for i in range(12,14):
+        addObstacle(row=i,col=11)    
+
 def updateSensors():
     global sensors 
     # throw_rays...(...) : appel couteux (une fois par itération du simulateur). permet de mettre à jour le masque de collision pour tous les robots.
@@ -685,8 +697,10 @@ elif arena == 1:
     setupArena1()
 elif arena == 2:
     setupArena2()
-else :
+elif arena == 3 :
     setupArena3()
+elif arena == 4:
+    setupArena4()
 
 setupAgents()
 game.mainiteration()
