@@ -19,16 +19,20 @@
 #   2019-04-02__11:42 - passage Python 3.x
 #
 # Cet exemple illustre la recherche aléatoire de contrôleur, dont la performance est mesurée en fonction d'une tâche fixée par l'utilisateur.
-# Le contrôleur est ici un réseau de neurones de type Perceptron, c'est à dire que les vitesses de translation et rotation sont fixées par une combinaison linéaire entre entrées sensorielles et paramètres, en appliquant une fonction tangente hyperbolique pour obtenir une réponse non-linéaire et bornée entre -1 et +1.
+# Le contrôleur est ici un réseau de neurones de type Perceptron, c'est à dire que les vitesses de translation et rotation sont fixées par une combinaison linéaire
+# entre entrées sensorielles et paramètres, en appliquant une fonction tangente hyperbolique pour obtenir une réponse non-linéaire et bornée entre -1 et +1.
 # Les paramètres contenu dans le génome sont ici limités à un vecteur donc chaque élément prend soit -1 (inhibition), 0 (annulation), +1 (excitation).
-# Il s'agit d'un problème d'optimisation de type boîte noir, ou la performance d'une solution donne peu d'information sur comment modifier les paramètres de cette solution pour l'améliorer.
+# Il s'agit d'un problème d'optimisation de type boîte noir, ou la performance d'une solution donne peu d'information sur comment modifier les paramètres de cette
+# solution pour l'améliorer.
 # Ce code donne les bases pour implémenter des algorithmes optimisation de type évolution artificielle (algorithmes génétiques, stratégies d'évolution, etc.)
 # A noter que ce code peut aussi facilement être étendu pour optimiser le comportement de groupe de robots (plutôt qu'un seul robot)
 #
 # Aide sur le code
-#   - La méthode "stepController" de la classe Agent, qui définit comment est utilisé le génome pour moduler les actions du robot en fonction des informations sensorielles
+#   - La méthode "stepController" de la classe Agent, qui définit comment est utilisé le génome pour moduler les actions du robot en fonction des informations
+# sensorielles
 #   - Les méthodes "updateFitness" de la classe Agent, qui permettent de définir une métrique pour la tâche visée
-#   - le contenu du main (tout en bas), ou est défini l'algorithme d'exploration (ici: un random search), y compris l'initialisation, la modification et le stockage des génomes, et leur évaluation
+#   - le contenu du main (tout en bas), ou est défini l'algorithme d'exploration (ici: un random search), y compris l'initialisation, la modification et le
+# stockage des génomes, et leur évaluation
 # Et aussi, éventuellement:
 #   - Partie "variables globales"
 #   - La fonction setupAgents (permet de placer les robots au début de la simulation)
@@ -37,8 +41,10 @@
 # 
 # Aide sur la partie optimisation:
 #   - pour modifier un genome, il faut modifier sa taille (dans le main lors de l'initialisation) et son utilisation (dans le stepController)
-#   - pour définir l'objectif, il faut écrire une fonction fitness. Ce que mesure la fonction fitness peut être plus ou moins directement reliée à l'objectif (p.ex.: si l'objectif est d'optimiser des explorateurs, la fonction fitness peut être une mesure de la capacité à se déplacer en ligne droite en évitant les murs)
-#   - pour obtenir un tirage issue d'une distribution normal, il faut utiliser la fonction gauss. Exemple: random.gauss(0,1) <=> N(0,1) (i.e. tirage d'une distribution normale centrée sur 0 et d'écart type 1)
+#   - pour définir l'objectif, il faut écrire une fonction fitness. Ce que mesure la fonction fitness peut être plus ou moins directement reliée à l'objectif
+# (p.ex.: si l'objectif est d'optimiser des explorateurs, la fonction fitness peut être une mesure de la capacité à se déplacer en ligne droite en évitant les murs)
+#   - pour obtenir un tirage issu d'une distribution normale, il faut utiliser la fonction gauss. 
+# Exemple: random.gauss(0,1) <=> N(0,1) (i.e. tirage d'une distribution normale centrée sur 0 et d'écart type 1)
 
 from robosim import *
 from random import random, shuffle, randint, gauss
@@ -47,6 +53,10 @@ import time
 import sys
 import atexit
 from itertools import count
+import matplotlib.pyplot as plt
+import numpy as np
+
+from copy import deepcopy
 
 
 '''''''''''''''''''''''''''''
@@ -94,7 +104,7 @@ class Agent(object):
     agentIdCounter = 0 # use as static
     id = -1
     robot = -1
-    name = "Equipe Evol" # A modifier avec le nom de votre équipe
+    name = "Team Grenouille" # A modifier avec le nom de votre équipe
 
     translationValue = 0 # ne pas modifier directement
     rotationValue = 0 # ne pas modifier directement
@@ -168,20 +178,20 @@ class Agent(object):
         translation = 0
         rotation = 0
         
-        #sensorMinus80 = self.getDistanceAtSensor(1)
+        sensorMinus80 = self.getDistanceAtSensor(1)
         sensorMinus40 = self.getDistanceAtSensor(2)
         sensorMinus20 = self.getDistanceAtSensor(3)
         sensorPlus20 = self.getDistanceAtSensor(4)
         sensorPlus40 = self.getDistanceAtSensor(5)
-        #sensorPlus80 = self.getDistanceAtSensor(6)
+        sensorPlus80 = self.getDistanceAtSensor(6)
 
-        if len(self.params) != 10: # vérifie que le nombre de paramètres donné est correct
+        if len(self.params) != 14: # vérifie que le nombre de paramètres donné est correct
             print ("[ERROR] number of parameters is incorrect. Exiting.")
             exit()
 
         # Perceptron: a linear combination of sensory inputs with weights (=parameters). Use an additional parameters as a bias, and apply hyperbolic tangeant to ensure result is in [-1,+1]
-        translation =  math.tanh( sensorMinus40 * self.params[0] + sensorMinus20 * self.params[1] + sensorPlus20 * self.params[2] + sensorPlus40 * self.params[3] + self.params[4] ) 
-        rotation =  math.tanh( sensorMinus40 * self.params[5] + sensorMinus20 * self.params[6] + sensorPlus20 * self.params[7] + sensorPlus40 * self.params[8] + self.params[9] )
+        translation =  math.tanh( sensorMinus80 * self.params[0] + sensorMinus40 * self.params[1] + sensorMinus20 * self.params[2] + sensorPlus20 * self.params[3] + sensorPlus40 * self.params[4] + sensorPlus80 * self.params[5] + self.params[6]) 
+        rotation =  math.tanh( sensorMinus80 * self.params[7] + sensorMinus40 * self.params[8] + sensorMinus20 * self.params[9] + sensorPlus20 * self.params[10] + sensorPlus40 * self.params[11] + sensorPlus80 * self.params[12] + self.params[13] )
 
         #print ("robot #", self.id, "[r =",rotation," - t =",translation,"]")
 
@@ -318,6 +328,15 @@ class MyTurtle(Turtle): # also: limit robot speed through this derived class
 def onExit():
     print ("\n[Terminated]")
 
+def mute(individu,pMute):
+    nouvelIndividu = []
+    for e in individu:
+        if random() < pMute:
+            nouvelIndividu.append( (e + 1) % 2 )
+        else:
+            nouvelIndividu.append( e )
+    return nouvelIndividu
+
 
 ''''''''''''''''''''''''''''''
 ''''''''''''''''''''''''''''''
@@ -363,17 +382,44 @@ bestEvalIt = 0
 maxEvaluations = 100 # budget en terme de nombre de robots évalués au total
 maxIterations = 200 # temps passé pour évaluer _un_ robot
 nbReevaluations = 4
-genomeSize = 10
+genomeSize = 14
+taillePopulation = 10
+mutation = 1 / genomeSize
+
+def mute(fitnessAMuter,mutation):
+    nombreMutations = mutation * genomeSize
+    fitnessTemp = deepcopy(fitnessAMuter)
+    for i in range(nombreMutations):
+        temp = randint(0,genomeSize-1)
+        while(fitnessTemp[temp] == fitnessAMuter[temp]) :
+            fitnessTemp[temp] = randint(-1,+1)
+
+# Initialisation
+# Parent
+
+for i in range(genomeSize):  # taille du genome 
+    bestParams.append(randint(-1,+1)) # construit un genome composé de N valeurs -1, 0 ou +1
+# Enfants
+
+fitness = deepcopy(bestFitness)
+
+for enfants in range(taillePopulation):
+        params.append(mute(fitness))
+
+'''
+x = np.arange(maxEvaluations)
+y = np.arange(maxEvaluations)
+z = np.arange(maxEvaluations)
+'''
 
 for evaluationIt in range(maxEvaluations):
 
-    print ("Evaluation #"), evaluationIt
+
+
+    #print ("Evaluation #"), evaluationIt
 
     # genere un nouveau jeu de paramètres
     params = []
-    for i in range(genomeSize):  # taille du genome 
-        params.append(randint(-1,+1)) # construit un genome composé de N valeurs -1, 0 ou +1
-
     # evalue les parametres
     fitness = 0
     for i in range (nbReevaluations): # N évaluations indépendantes
@@ -386,13 +432,27 @@ for evaluationIt in range(maxEvaluations):
 
     print ("\tParameters:", str(params))
     print ("\tFitness:", fitness, "(best:", bestFitness,")")
+'''
+    #print(str(evaluationIt)+","+str(fitness)+","+str(bestFitness))
+
+    
+    #print(str(bestFitness))
+
+    x[evaluationIt] = evaluationIt
+    y[evaluationIt] = fitness
+    #z[evaluationIt] = bestFitness
+
+
+plt.plot(x,y,color='red')
+plt.show()
+'''
 
 game.frameskip = 1 # affichage à vitesse normal
 
 print ("Display best individual")
 print ("\tParameters:", str(bestParams))
 i = 0
-while True:
+while i<1:
     print ("\tTest #",i)
     i = i + 1
 
