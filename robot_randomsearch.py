@@ -389,10 +389,13 @@ mutation = 1 / genomeSize
 def mute(fitnessAMuter,mutation):
     nombreMutations = mutation * genomeSize
     fitnessTemp = deepcopy(fitnessAMuter)
-    for i in range(nombreMutations):
+    for i in range(int(nombreMutations)):
         temp = randint(0,genomeSize-1)
         while(fitnessTemp[temp] == fitnessAMuter[temp]) :
             fitnessTemp[temp] = randint(-1,+1)
+    return fitnessTemp
+
+# Une mutation c'est bon, mais plusieurs mutations : forcer à muter sur différents gènes
 
 # Initialisation
 # Parent
@@ -401,10 +404,12 @@ for i in range(genomeSize):  # taille du genome
     bestParams.append(randint(-1,+1)) # construit un genome composé de N valeurs -1, 0 ou +1
 # Enfants
 
-fitness = deepcopy(bestFitness)
+paramEnfant = deepcopy(bestParams)
 
-for enfants in range(taillePopulation):
-        params.append(mute(fitness))
+params = []
+
+for i in range(taillePopulation):
+    params.append(paramEnfant)
 
 '''
 x = np.arange(maxEvaluations)
@@ -412,30 +417,44 @@ y = np.arange(maxEvaluations)
 z = np.arange(maxEvaluations)
 '''
 
-for evaluationIt in range(maxEvaluations):
+for evaluationIt in range(maxEvaluations): # générations
 
 
-
+    fitness = 0
+    fitness_best = 0
+    best_enfant = []
     #print ("Evaluation #"), evaluationIt
 
     # genere un nouveau jeu de paramètres
-    params = []
     # evalue les parametres
-    fitness = 0
+
+    for enfant in params:
+        enfant = mute(enfant,mutation)
+
+    for enfant in params:
+        fitness = agents[0].evaluate(enfant)
+        if fitness > fitness_best:
+            fitness_best = fitness
+            best_enfant = enfant
+    '''
     for i in range (nbReevaluations): # N évaluations indépendantes
         fitness += agents[0].evaluate(params)
+    '''
 
-    if bestFitness < fitness:
-        bestParams = list(params)
-        bestFitness = fitness
+    if bestFitness < fitness_best:
+        bestParams = list(best_enfant)
+        bestFitness = fitness_best
         bestEvalIt = evaluationIt
 
-    print ("\tParameters:", str(params))
+    print ("Evaluation =", evaluationIt)
+    print ("\tParameters:", str(bestParams))
     print ("\tFitness:", fitness, "(best:", bestFitness,")")
+
+print("bestParams =",bestParams)
+
 '''
     #print(str(evaluationIt)+","+str(fitness)+","+str(bestFitness))
 
-    
     #print(str(bestFitness))
 
     x[evaluationIt] = evaluationIt
@@ -461,4 +480,3 @@ while i<1:
 
     print ("\t\tFitness:", fitness, "(original recorded fitness:", bestFitness,", measured at evaluation",bestEvalIt,")")
     print ("\t\tGenome:", bestParams)
-
