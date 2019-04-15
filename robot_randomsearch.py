@@ -47,7 +47,7 @@
 # Exemple: random.gauss(0,1) <=> N(0,1) (i.e. tirage d'une distribution normale centrée sur 0 et d'écart type 1)
 
 from robosim import *
-from random import random, shuffle, randint, gauss
+from random import *
 import math
 import time
 import sys
@@ -81,7 +81,9 @@ game = Game()
 agents = []
 screen_width=512 #512,768,... -- multiples de 32  
 screen_height=512 #512,768,... -- multiples de 32
-nbAgents = 1
+nbAgents = 10
+
+arena = 4
 
 maxSensorDistance = 30              # utilisé localement.
 maxRotationSpeed = 5
@@ -112,6 +114,8 @@ class Agent(object):
     params = []
     fitness = 0
     previousPos = (0,0)
+
+    pos = set()
     
     def __init__(self,robot):
         self.id = Agent.agentIdCounter
@@ -134,10 +138,11 @@ class Agent(object):
 
         for i in range(maxIterations):
             updateSensors()
+            #others.step()
             self.step()
             #self.updateFitness1() # pour maximiser la distance au centre de l'arène
             #self.updateFitness2() # pour maximiser la distance parcourue a chaque pas de temps
-            self.updateFitness3() # pour maximiser la distance parcourue a chaque pas de temps, en pénalisant les commandes de rotation
+            self.updateFitness4() # pour maximiser la distance parcourue a chaque pas de temps, en pénalisant les commandes de rotation
             game.mainiteration()
 
         return self.fitness
@@ -169,31 +174,86 @@ class Agent(object):
         self.fitness += ( 1 - abs(self.rotationValue/maxRotationSpeed) ) * math.sqrt(abs(currentPos[0]**2-self.previousPos[0]**2)) + math.sqrt(abs(currentPos[1]**2-self.previousPos[1]**2)) # a chaque pas de temps, ajoute la distance parcourue depuis t-1, avec une pénalité si rotation
         self.previousPos = currentPos
 
+    def updateFitness4(self):
+        currentPos = self.robot.get_centroid()
+        currentPos = tuple(map(lambda x: int(x), currentPos))
+        if currentPos not in self.pos:
+            self.fitness += 5
+            self.pos.add(currentPos)
+        else:
+            self.fitness -= 2
+        self.previousPos = currentPos
+
+    def updateFitness5(self): # anti parasite + découverte
+        currentPos = self.robot.get_centroid()
+        currentPos = tuple(map(lambda x: int(x), currentPos))
+        for i in range(len(SensorBelt)):
+            if self.getDistanceAtSensor(i)==2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
+                self.fitness -= 2
+            else:
+                self.fitness += 8
+        if currentPos not in self.pos:
+            self.fitness += 5
+            self.pos.add(currentPos)
+        else:
+            self.fitness -= 2
+        self.previousPos = currentPos
+
+
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-    def stepController(self):
-
+    def stepController(self, ennemy=False):
+        rotation =0
+        translation = 0
+        #if self.id == 0 :    
         translation = 0
         rotation = 0
-        
+        '''
         sensorMinus80 = self.getDistanceAtSensor(1)
         sensorMinus40 = self.getDistanceAtSensor(2)
         sensorMinus20 = self.getDistanceAtSensor(3)
         sensorPlus20 = self.getDistanceAtSensor(4)
         sensorPlus40 = self.getDistanceAtSensor(5)
         sensorPlus80 = self.getDistanceAtSensor(6)
+        '''
+        if not ennemy:
+            '''
+            if len(self.params) != 14: # vérifie que le nombre de paramètres donné est correct
+                print ("[ERROR] number of parameters is incorrect. Exiting.")
+                exit()
+            # Perceptron: a linear combination of sensory inputs with weights (=parameters). Use an additional parameters as a bias, and apply hyperbolic tangeant to ensure result is in [-1,+1]
+            translation =  math.tanh( sensorMinus80 * self.params[0] + sensorMinus40 * self.params[1] + sensorMinus20 * self.params[2] + sensorPlus20 * self.params[3] + sensorPlus40 * self.params[4] + sensorPlus80 * self.params[5] + self.params[6]) 
+            rotation =  math.tanh( sensorMinus80 * self.params[7] + sensorMinus40 * self.params[8] + sensorMinus20 * self.params[9] + sensorPlus20 * self.params[10] + sensorPlus40 * self.params[11] + sensorPlus80 * self.params[12] + self.params[13] )
 
-        if len(self.params) != 14: # vérifie que le nombre de paramètres donné est correct
-            print ("[ERROR] number of parameters is incorrect. Exiting.")
-            exit()
+            #print ("robot #", self.id, "[r =",rotation," - t =",translation,"]")
+            '''
 
-        # Perceptron: a linear combination of sensory inputs with weights (=parameters). Use an additional parameters as a bias, and apply hyperbolic tangeant to ensure result is in [-1,+1]
-        translation =  math.tanh( sensorMinus80 * self.params[0] + sensorMinus40 * self.params[1] + sensorMinus20 * self.params[2] + sensorPlus20 * self.params[3] + sensorPlus40 * self.params[4] + sensorPlus80 * self.params[5] + self.params[6]) 
-        rotation =  math.tanh( sensorMinus80 * self.params[7] + sensorMinus40 * self.params[8] + sensorMinus20 * self.params[9] + sensorPlus20 * self.params[10] + sensorPlus40 * self.params[11] + sensorPlus80 * self.params[12] + self.params[13] )
+            sensorMinus170 = self.getDistanceAtSensor(0)
+            sensorMinus80 = self.getDistanceAtSensor(1)
+            sensorMinus40 = self.getDistanceAtSensor(2)
+            sensorMinus20 = self.getDistanceAtSensor(3)
+            sensorPlus20 = self.getDistanceAtSensor(4)
+            sensorPlus40 = self.getDistanceAtSensor(5)
+            sensorPlus80 = self.getDistanceAtSensor(6)
+            sensorPlus170 = self.getDistanceAtSensor(7)
 
-        #print ("robot #", self.id, "[r =",rotation," - t =",translation,"]")
+            translation =  math.tanh( sensorMinus80 * self.params[0] + sensorMinus40 * self.params[1] + sensorMinus20 * self.params[2] + sensorPlus20 * self.params[3] + sensorPlus40 * self.params[4] + sensorPlus80 * self.params[5] + sensorMinus170 * self.params[6] + self.params[7]) 
+            rotation =  math.tanh( sensorMinus80 * self.params[8] + sensorMinus40 * self.params[9] + sensorMinus20 * self.params[10] + sensorPlus20 * self.params[11] + sensorPlus40 * self.params[12] + sensorPlus80 * self.params[13] + sensorPlus170 * self.params[14] + self.params[15])
+                    
+            self.setRotationValue(rotation)
+            self.setTranslationValue(translation)
+        else :
+            if self.getObjectTypeAtSensor(3) == 1 or self.getObjectTypeAtSensor(4) == 1 or self.getObjectTypeAtSensor(1) == 1 or self.getObjectTypeAtSensor(0) == 1 :
+                n = randint(1,4)
+                if n == 4 :
+                    translation = 1
+                    rotation = 1
+            else :
+                # Evite les murs et les robots
+                for i in range(len(SensorBelt)):
+                    rotation += self.getObjectTypeAtSensor(i)
 
         self.setRotationValue( rotation )
         self.setTranslationValue( translation )
@@ -204,8 +264,8 @@ class Agent(object):
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-    def step(self):
-        self.stepController()
+    def step(self, ennemy=False):
+        self.stepController(ennemy)
         self.move()
 
     def move(self):
@@ -235,10 +295,10 @@ class Agent(object):
 
     def setTranslationValue(self,value):
         if value > 1:
-            print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
+            #print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
             value = maxTranslationSpeed
         elif value < -1:
-            print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
+            #print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
             value = -maxTranslationSpeed
         else:
             value = value * maxTranslationSpeed
@@ -246,10 +306,10 @@ class Agent(object):
 
     def setRotationValue(self,value):
         if value > 1:
-            print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
+            #print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
             value = maxRotationSpeed
         elif value < -1:
-            print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
+            #print ("[WARNING] translation value not in [-1,+1]. Normalizing.")
             value = -maxRotationSpeed
         else:
             value = value * maxRotationSpeed
@@ -293,6 +353,23 @@ def setupArena():
     addObstacle(row=9,col=3)
 
 
+def setupArena4():
+    for i in range(3,11):
+        addObstacle(row=3,col=i)
+    for i in range(3,9):
+        addObstacle(row=i,col=11)
+    for i in range(8,12):
+        addObstacle(row=9,col=i)
+    for i in range(5,12):
+        addObstacle(row=11,col=i)
+    for i in range(5,12):
+        addObstacle(row=i,col=5)
+    for i in range(12,14):
+        addObstacle(row=i,col=11)
+    for i in range(6,10):
+        addObstacle(row=5,col=i)   
+
+
 def updateSensors():
     global sensors 
     # throw_rays...(...) : appel couteux (une fois par itération du simulateur). permet de mettre à jour le masque de collision pour tous les robots.
@@ -300,14 +377,15 @@ def updateSensors():
     
 
 def stepWorld():
-
     updateSensors()
 
     # chaque agent se met à jour. L'ordre de mise à jour change à chaque fois (permet d'éviter des effets d'ordre).
     shuffledIndexes = [i for i in range(len(agents))]
-    shuffle(shuffledIndexes)     
-    for i in range(len(agents)):
-        agents[shuffledIndexes[i]].step()
+    shuffle(shuffledIndexes)
+    agents[0].step()
+    shuffledIndexes.remove(0)
+    for i in range(len(agents)-1):
+        agents[shuffledIndexes[i]].step(ennemy=True)
     return
 
 '''''''''''''''''''''''''''''
@@ -358,6 +436,8 @@ game.frameskip = frameskip
 atexit.register(onExit)
 
 setupArena()
+
+
 setupAgents()
 game.mainiteration()
 
@@ -380,9 +460,9 @@ bestParams = []
 bestEvalIt = 0
 
 maxEvaluations = 100 # budget en terme de nombre de robots évalués au total
-maxIterations = 200 # temps passé pour évaluer _un_ robot
+maxIterations = 750 # temps passé pour évaluer _un_ robot
 nbReevaluations = 4
-genomeSize = 14
+genomeSize = 16
 taillePopulation = 10
 mutation = 1 / genomeSize
 
@@ -392,7 +472,7 @@ def mute(fitnessAMuter,mutation):
     for i in range(int(nombreMutations)):
         temp = randint(0,genomeSize-1)
         while(fitnessTemp[temp] == fitnessAMuter[temp]) :
-            fitnessTemp[temp] = randint(-1,+1)
+            fitnessTemp[temp] = uniform(-1.0,1.0)
     return fitnessTemp
 
 # Une mutation c'est bon, mais plusieurs mutations : forcer à muter sur différents gènes
@@ -402,6 +482,7 @@ def mute(fitnessAMuter,mutation):
 
 for i in range(genomeSize):  # taille du genome 
     bestParams.append(randint(-1,+1)) # construit un genome composé de N valeurs -1, 0 ou +1
+
 # Enfants
 
 paramEnfant = deepcopy(bestParams)
@@ -418,7 +499,8 @@ z = np.arange(maxEvaluations)
 '''
 
 for evaluationIt in range(maxEvaluations): # générations
-
+    updateSensors()
+    new_param = []
 
     fitness = 0
     fitness_best = 0
@@ -430,8 +512,14 @@ for evaluationIt in range(maxEvaluations): # générations
 
     for enfant in params:
         enfant = mute(enfant,mutation)
+        new_param.append(enfant)
+
 
     for enfant in params:
+        '''
+        for i in range(1, len(agents)):
+            agents[i].step(True)
+        '''
         fitness = agents[0].evaluate(enfant)
         if fitness > fitness_best:
             fitness_best = fitness
@@ -441,14 +529,17 @@ for evaluationIt in range(maxEvaluations): # générations
         fitness += agents[0].evaluate(params)
     '''
 
+    params = new_param
+
     if bestFitness < fitness_best:
         bestParams = list(best_enfant)
         bestFitness = fitness_best
         bestEvalIt = evaluationIt
 
+    #stepWorld()
     print ("Evaluation =", evaluationIt)
     print ("\tParameters:", str(bestParams))
-    print ("\tFitness:", fitness, "(best:", bestFitness,")")
+    print ("\tFitness:", fitness_best, "(best:", bestFitness,")")
 
 print("bestParams =",bestParams)
 

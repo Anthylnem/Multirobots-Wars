@@ -102,7 +102,7 @@ import math
 game = Game()
 agents = []
 
-arena = 2
+arena = 3
 
 nbAgents = 8 # doit être pair et inférieur a 32
 maxSensorDistance = 30              # utilisé localement.
@@ -193,7 +193,7 @@ class AgentTypeA(object):
     	# tout votre code doit tenir dans cette méthode. La seule mémoire autorisée est la variable self.etat
     	# (c'est un entier).
 
-        color( (0,255,255) )
+        color( (0,255,0) )
         circle( *self.getRobot().get_centroid() , r = 22)
         
         translation = 1
@@ -253,10 +253,8 @@ class AgentTypeA(object):
 
         # Télé-train + anti-parasite
         if self.id == 3 :
-            for i in range(len(SensorBelt)):
-                rotation += self.getObjectTypeAtSensor(i)
-            else :
-                params = [0, -1, -1, 0.8449572470497386, 0.2772933724660105, -1, 0.9121020462155531, 0.45633640795837005, 0, 0.7507189530663856, 0, -0.6309759587498023, -0.09976779273277026, 0]
+            if self.getObjectTypeAtSensor(7) != 1 and self.getObjectTypeAtSensor(0) != 1 :
+                params = [1, 0, 1, 1, 0, 1, 0, -1, -1, 0, 1, 1, 1, -1]
 
                 sensorMinus80 = self.getDistanceAtSensor(1)
                 sensorMinus40 = self.getDistanceAtSensor(2)
@@ -409,106 +407,46 @@ class AgentTypeB(object):
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-    teamname = "Equipe Test" # A modifier avec le nom de votre équipe
+    teamname = "GucciG@ng" # A modifier avec le nom de votre équipe
 
     def stepController(self):
+        import math
+        import numpy as np
+        color( (0,255,255) )
+        circle( *self.getRobot().get_centroid() , r = 22) # je dessine un rond bleu autour de ce robot
 
-        color( (0,255,0) )
-        circle( *self.getRobot().get_centroid() , r = 22)
+        self.setRotationValue(0)
+        self.setTranslationValue(1)
         
-        translation = 1
-        rotation = 0
-
-        # ROBOT 1 : évite robots+murs ou anti-parasite
-
-        if self.id == 0 :
-            # 1 : Evite les murs et les robots
-            for i in range(len(SensorBelt)):
-                rotation += self.getObjectTypeAtSensor(i)
-            # 2 : Anti-parasite : Essaye de reculer si un robot adversaire se colle à lui
-            if self.getObjectTypeAtSensor(0) == 2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
-                translation = -1
-                # Pour éviter de faire des agglutinements
-                if self.getObjectTypeAtSensor(7) == 2 and self.getRobotInfoAtSensor(7)['teamname'] == self.teamname :
-                    translation = 1
-
-
-        # ROBOT 2 : Longe les murs + anti-parasite
-
-        if self.id == 1 :
-            # Essaye de reculer si un robot adversaire se colle à lui
-            if self.getObjectTypeAtSensor(0) == 2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
-                translation = -1
-                # Pour éviter de faire des agglutinements
-                if self.getObjectTypeAtSensor(7) == 2 and self.getRobotInfoAtSensor(7)['teamname'] == self.teamname :
-                    translation = 1
-            elif self.getObjectTypeAtSensor(3) == 2 and self.getRobotInfoAtSensor(3)['teamname'] == self.teamname or self.getObjectTypeAtSensor(7) == 2 and self.getRobotInfoAtSensor(7)['teamname'] == self.teamname:
-                    translation = -1
-                    rotation = 1
-            elif self.getObjectTypeAtSensor(1) == 1 and self.getObjectTypeAtSensor(2) == 0:
-                rotation = -0.25
-            elif self.getObjectTypeAtSensor(6) == 1 and self.getObjectTypeAtSensor(5) == 0:
-                rotation = 0.25
-            else :
-                # Evite les murs et les robots
-                for i in range(len(SensorBelt)):
-                    rotation += self.getObjectTypeAtSensor(i)
-
-
-        # ROBOT 3 : parasite
-
-        if self.id == 2 :
-            for i in range(len(SensorBelt)):
-                if self.getObjectTypeAtSensor(i) == 2 and self.getRobotInfoAtSensor(i)['teamname'] != self.teamname :
-                    rotation += (self.getObjectTypeAtSensor(i) & 2)*SensorBelt[i]
-                else :
-                    # Evite les murs
-                    rotation += self.getObjectTypeAtSensor(i)
-
-        # Télé-train + anti-parasite
-        if self.id == 3 :
-            if self.getObjectTypeAtSensor(7) != 1 and self.getObjectTypeAtSensor(0) != 1 :
-                params = [1, 0, 1, 1, 0, 1, 0, -1, -1, 0, 1, 1, 1, -1]
-
-                sensorMinus80 = self.getDistanceAtSensor(1)
-                sensorMinus40 = self.getDistanceAtSensor(2)
-                sensorMinus20 = self.getDistanceAtSensor(3)
-                sensorPlus20 = self.getDistanceAtSensor(4)
-                sensorPlus40 = self.getDistanceAtSensor(5)
-                sensorPlus80 = self.getDistanceAtSensor(6)
-
-                translation =  math.tanh( sensorMinus80 * params[0] + sensorMinus40 * params[1] + sensorMinus20 * params[2] + sensorPlus20 * params[3] + sensorPlus40 * params[4] + sensorPlus80 * params[5] + params[6]) 
-                rotation =  math.tanh( sensorMinus80 * params[7] + sensorMinus40 * params[8] + sensorMinus20 * params[9] + sensorPlus20 * params[10] + sensorPlus40 * params[11] + sensorPlus80 * params[12] + params[13] )
-            elif self.getObjectTypeAtSensor(0) == 2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
-                translation = -1
-            else :
-                translation = 1    
-
-        # Cas de base
-        else :
-            # 1 : Evite les murs et les robots
-            for i in range(len(SensorBelt)):
-                rotation += self.getObjectTypeAtSensor(i)
-            # 2 : Anti-parasite : Essaye de reculer si un robot adversaire se colle à lui
-            if self.getObjectTypeAtSensor(0) == 2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
-                translation = -1
-                # Pour éviter de faire des agglutinements
-                if self.getObjectTypeAtSensor(7) == 2 and self.getRobotInfoAtSensor(7)['teamname'] == self.teamname :
-                    translation = 1
-    
-        self.setRotationValue(rotation)
-        self.setTranslationValue(translation)
+        SensorValues = [self.getObjectTypeAtSensor(0)%3*(1/self.getDistanceAtSensor(0)**2),
+                        self.getObjectTypeAtSensor(1)%3*(1/self.getDistanceAtSensor(1)**2),
+                        self.getObjectTypeAtSensor(2)%3*(1/self.getDistanceAtSensor(2)**2),
+                        self.getObjectTypeAtSensor(3)%3*(1/self.getDistanceAtSensor(3)**2),
+                        self.getObjectTypeAtSensor(4)%3*(1/self.getDistanceAtSensor(4)**2),
+                        self.getObjectTypeAtSensor(5)%3*(1/self.getDistanceAtSensor(5)**2),
+                        self.getObjectTypeAtSensor(6)%3*(1/self.getDistanceAtSensor(6)**2),
+                        self.getObjectTypeAtSensor(7)%3*(1/self.getDistanceAtSensor(7)**2)]
         
-		# monitoring (optionnel - changer la valeur de verbose)
+        rotationValue = -1*math.tanh(math.radians(SensorBelt[np.argmax(SensorValues)]))
+        #math.tanh(math.radians((SensorValues[3]*SensorBelt[3]-SensorValues[4]*SensorBelt[4])+
+         #                                       (SensorValues[2]*SensorBelt[2]-SensorValues[5]*SensorBelt[5])))
+        if rotationValue <.98 and rotationValue >-.98:
+            self.setRotationValue(rotationValue)
+        
+        self.setTranslationValue(1) # normalisé -1,+1  
+
+        
+        # monitoring (optionnel - changer la valeur de verbose)
         if verbose == True:
-	        print ("Robot #"+str(self.id)+" [teamname:\""+str(self.teamname)+"\"] [variable mémoire = "+str(self.etat)+"] :")
-	        for i in range(8):
-	            print ("\tSenseur #"+str(i)+" (angle: "+ str(SensorBelt[i])+"°)")
-	            print ("\t\tDistance  :",self.getDistanceAtSensor(i))
-	            print ("\t\tType      :",self.getObjectTypeAtSensor(i)) # 0: nothing, 1: wall/border, 2: robot
-	            print ("\t\tRobot info:",self.getRobotInfoAtSensor(i)) # dict("id","centroid(x,y)","orientation") (if not a robot: returns None and display a warning)
+            print ("Robot #"+str(self.id)+" [teamname:\""+str(self.teamname)+"\"] [variable mémoire = "+str(self.etat)+"] :")
+            for i in range(8):
+                print ("\tSenseur #"+str(i)+" (angle: "+ str(SensorBelt[i])+"°)")
+                print ("\t\tDistance  :",self.getDistanceAtSensor(i))
+                print ("\t\tType      :",self.getObjectTypeAtSensor(i)) # 0: nothing, 1: wall/border, 2: robot
+                print ("\t\tRobot info:",self.getRobotInfoAtSensor(i)) # dict("id","centroid(x,y)","orientation") (if not a robot: returns None and display a warning)
 
         return
+
 
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=

@@ -30,9 +30,9 @@
 from robosim import *
 from random import random, shuffle, randint
 import time
+import math
 import sys
-import atexit
-from itertools import count
+import atexit   
 
 
 '''''''''''''''''''''''''''''
@@ -56,7 +56,7 @@ game = Game()
 
 agents = []
 
-arena = 3
+arena = 0
 
 screen_width=512 #512,768,... -- multiples de 32  
 screen_height=512 #512,768,... -- multiples de 32
@@ -123,14 +123,22 @@ class Agent(object):
         stratégie = 4
 
         
-           # Télé           
-        if stratégie == 4 :
-            if self.getObjectTypeAtSensor(3) == 1 or self.getObjectTypeAtSensor(4) == 1 or self.getObjectTypeAtSensor(1) == 1 or self.getObjectTypeAtSensor(0) == 1 :
-                n = randint(1,4)
-                if n == 4 :
-                    translation = 1
-                    rotation = 1
-                        
+        #params = [0, 1, 0, 1, -1, 1, 1, -1, -1, -1, 1, 1, 1, 0]
+        #params = [1, 0, 1, 1, 0, 1, 0, -1, -1, 0, 1, 1, 1, -1]
+        params = [0, -1, -1, 0.8449572470497386, 0.2772933724660105, -1, 0.9121020462155531, 0.45633640795837005, 0, 0.7507189530663856, 0, -0.6309759587498023, -0.09976779273277026, 0]
+
+        sensorMinus170 = self.getDistanceAtSensor(0)
+        sensorMinus80 = self.getDistanceAtSensor(1)
+        sensorMinus40 = self.getDistanceAtSensor(2)
+        sensorMinus20 = self.getDistanceAtSensor(3)
+        sensorPlus20 = self.getDistanceAtSensor(4)
+        sensorPlus40 = self.getDistanceAtSensor(5)
+        sensorPlus80 = self.getDistanceAtSensor(6)
+        sensorPlus170 = self.getDistanceAtSensor(7)
+
+        translation =  math.tanh( sensorMinus80 * params[0] + sensorMinus40 * params[1] + sensorMinus20 * params[2] + sensorPlus20 * params[3] + sensorPlus40 * params[4] + sensorPlus80 * params[5] + sensorMinus170 * params[6] + params[7]) 
+        rotation =  math.tanh( sensorMinus80 * params[8] + sensorMinus40 * params[9] + sensorMinus20 * params[10] + sensorPlus20 * params[11] + sensorPlus40 * params[12] + sensorPlus80 * params[13] + sensorPlus170 * params[14] + params[15])
+                
         self.setRotationValue(rotation)
         self.setTranslationValue(translation)
 
@@ -268,7 +276,7 @@ def stepWorld():
     # chaque agent se met à jour. L'ordre de mise à jour change à chaque fois (permet d'éviter des effets d'ordre).
     shuffledIndexes = [i for i in range(len(agents))]
     shuffle(shuffledIndexes)
-    for i in range(len(agents)):
+    for i in range(len(agents)):    
         agents[shuffledIndexes[i]].step()
     return
 

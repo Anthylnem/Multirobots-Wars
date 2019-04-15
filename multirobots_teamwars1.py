@@ -90,7 +90,6 @@ from random import random, shuffle, randint
 import time
 import sys
 import atexit
-import math
 
 
 '''''''''''''''''''''''''''''
@@ -102,7 +101,7 @@ import math
 game = Game()
 agents = []
 
-arena = 2
+arena = 0
 
 nbAgents = 8 # doit être pair et inférieur a 32
 maxSensorDistance = 30              # utilisé localement.
@@ -193,33 +192,51 @@ class AgentTypeA(object):
     	# tout votre code doit tenir dans cette méthode. La seule mémoire autorisée est la variable self.etat
     	# (c'est un entier).
 
-        color( (0,255,255) )
+        color( (0,255,0) )
         circle( *self.getRobot().get_centroid() , r = 22)
         
         translation = 1
         rotation = 0
-
-        # ROBOT 1 : évite robots+murs ou anti-parasite
+        stratégie = 3
 
         if self.id == 0 :
-            color( (0,0,0) )
+            stratégie = 5
+            color( (0,0,255) )
             circle( *self.getRobot().get_centroid() , r = 22)
-            # 1 : Evite les murs et les robots
+
+        if self.id == 1 :
+            stratégie = 3
+            color( (255,255,255) )
+            circle( *self.getRobot().get_centroid() , r = 22)
+        if self.id == 2 :
+            stratégie = 1
+            color( (255,255,0) )
+            circle( *self.getRobot().get_centroid() , r = 22)
+
+        
+        # Parasite
+        if stratégie == 1 :
             for i in range(len(SensorBelt)):
-                rotation += self.getObjectTypeAtSensor(i)
-            # 2 : Anti-parasite : Essaye de reculer si un robot adversaire se colle à lui
+                if self.getObjectTypeAtSensor(i) == 2 and self.getRobotInfoAtSensor(i)['teamname'] != self.teamname :
+                    rotation += (self.getObjectTypeAtSensor(i) & 2)*SensorBelt[i]
+                else :
+                    rotation += self.getObjectTypeAtSensor(i)
+    
+        # Anti-parasite
+        elif stratégie == 2 :
+            # Essaye de reculer si un robot adversaire se colle à lui
             if self.getObjectTypeAtSensor(0) == 2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
                 translation = -1
                 # Pour éviter de faire des agglutinements
                 if self.getObjectTypeAtSensor(7) == 2 and self.getRobotInfoAtSensor(7)['teamname'] == self.teamname :
                     translation = 1
-
-
-        # ROBOT 2 : Longe les murs + anti-parasite
-
-        if self.id == 1 :
-            color( (0,0,255) )
-            circle( *self.getRobot().get_centroid() , r = 22)
+            else :
+                # Evite les murs et les robots
+                for i in range(len(SensorBelt)):
+                        rotation += self.getObjectTypeAtSensor(i)
+    
+        # Longe les murs + anti-parasite
+        elif stratégie == 3 :
             # Essaye de reculer si un robot adversaire se colle à lui
             if self.getObjectTypeAtSensor(0) == 2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
                 translation = -1
@@ -237,26 +254,22 @@ class AgentTypeA(object):
                 # Evite les murs et les robots
                 for i in range(len(SensorBelt)):
                     rotation += self.getObjectTypeAtSensor(i)
-
-
-        # ROBOT 3 : parasite
-
-        if self.id == 2 :
-            color( (255,255,0) )
-            circle( *self.getRobot().get_centroid() , r = 22)
-            for i in range(len(SensorBelt)):
-                if self.getObjectTypeAtSensor(i) == 2 and self.getRobotInfoAtSensor(i)['teamname'] != self.teamname :
-                    rotation += (self.getObjectTypeAtSensor(i) & 2)*SensorBelt[i]
-                else :
-                    # Evite les murs
+        # Télé           
+        elif stratégie == 4 :
+            if self.getObjectTypeAtSensor(3) == 1 or self.getObjectTypeAtSensor(4) == 1 or self.getObjectTypeAtSensor(1) == 1 or self.getObjectTypeAtSensor(0) == 1 :
+                n = randint(1,4)
+                if n == 4 :
+                    translation = 1
+                    rotation = 1
+            else :
+                # Evite les murs et les robots
+                for i in range(len(SensorBelt)):
                     rotation += self.getObjectTypeAtSensor(i)
 
-        # Télé-train + anti-parasite
-        if self.id == 3 :
-            for i in range(len(SensorBelt)):
-                rotation += self.getObjectTypeAtSensor(i)
-            else :
-                params = [0, -1, -1, 0.8449572470497386, 0.2772933724660105, -1, 0.9121020462155531, 0.45633640795837005, 0, 0.7507189530663856, 0, -0.6309759587498023, -0.09976779273277026, 0]
+        # Télé-train
+        elif stratégie == 5 :
+            if self.getObjectTypeAtSensor(7) != 1 and self.getObjectTypeAtSensor(0) != 1 :
+                params = [1, 0, 1, 1, 0, 1, 0, -1, -1, 0, 1, 1, 1, -1]
 
                 sensorMinus80 = self.getDistanceAtSensor(1)
                 sensorMinus40 = self.getDistanceAtSensor(2)
@@ -267,37 +280,8 @@ class AgentTypeA(object):
 
                 translation =  math.tanh( sensorMinus80 * params[0] + sensorMinus40 * params[1] + sensorMinus20 * params[2] + sensorPlus20 * params[3] + sensorPlus40 * params[4] + sensorPlus80 * params[5] + params[6]) 
                 rotation =  math.tanh( sensorMinus80 * params[7] + sensorMinus40 * params[8] + sensorMinus20 * params[9] + sensorPlus20 * params[10] + sensorPlus40 * params[11] + sensorPlus80 * params[12] + params[13] )
-            elif self.getObjectTypeAtSensor(0) == 2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
-                translation = -1
             else :
-                translation = 1    
-
-        # Cas de base
-        else :
-            # 1 : Evite les murs et les robots
-            for i in range(len(SensorBelt)):
-                rotation += self.getObjectTypeAtSensor(i)
-            # 2 : Anti-parasite : Essaye de reculer si un robot adversaire se colle à lui
-            if self.getObjectTypeAtSensor(0) == 2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
-                translation = -1
-                # Pour éviter de faire des agglutinements
-                if self.getObjectTypeAtSensor(7) == 2 and self.getRobotInfoAtSensor(7)['teamname'] == self.teamname :
-                    translation = 1
-
-        '''            
-        # Télé           
-        if stratégie == 4 :
-            if self.getObjectTypeAtSensor(3) == 1 or self.getObjectTypeAtSensor(4) == 1 or self.getObjectTypeAtSensor(1) == 1 or self.getObjectTypeAtSensor(0) == 1 :
-                n = randint(1,4)
-                if n == 4 :
-                    translation = 1
-                    rotation = 1
-            else :
-                # Evite les murs et les robots
-                for i in range(len(SensorBelt)):
-                    rotation += self.getObjectTypeAtSensor(i)
-        '''
-        
+                translation = -1    
 
         self.setRotationValue(rotation)
         self.setTranslationValue(translation)
@@ -413,36 +397,57 @@ class AgentTypeB(object):
 
     def stepController(self):
 
-        color( (0,255,0) )
-        circle( *self.getRobot().get_centroid() , r = 22)
+        color( (255,0,0) )
+        circle( *self.getRobot().get_centroid() , r = 22) # je dessine un rond bleu autour de ce robot
         
         translation = 1
         rotation = 0
+        stratégie = 4
+        
+        # Stratégie de base
+        if stratégie == 0 :
+            distGauche = self.getDistanceAtSensor(2) # renvoi une valeur normalisée entre 0 et 1
+            distDroite = self.getDistanceAtSensor(5) # renvoi une valeur normalisée entre 0 et 1
+            
+            if distGauche < distDroite:
+                rotation = 1
+            elif distGauche > distDroite:
+                rotation = - 1
+            else:
+                rotation = 0
 
-        # ROBOT 1 : évite robots+murs ou anti-parasite
-
-        if self.id == 0 :
-            # 1 : Evite les murs et les robots
+            translation = 1
+        
+        # Parasite
+        elif stratégie == 1 :
             for i in range(len(SensorBelt)):
-                rotation += self.getObjectTypeAtSensor(i)
-            # 2 : Anti-parasite : Essaye de reculer si un robot adversaire se colle à lui
-            if self.getObjectTypeAtSensor(0) == 2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
-                translation = -1
-                # Pour éviter de faire des agglutinements
-                if self.getObjectTypeAtSensor(7) == 2 and self.getRobotInfoAtSensor(7)['teamname'] == self.teamname :
-                    translation = 1
-
-
-        # ROBOT 2 : Longe les murs + anti-parasite
-
-        if self.id == 1 :
+                if self.getObjectTypeAtSensor(i) == 2 and self.getRobotInfoAtSensor(i)['teamname'] != self.teamname :
+                    rotation += (self.getObjectTypeAtSensor(i) & 2)*SensorBelt[i]
+                else :
+                    rotation += self.getObjectTypeAtSensor(i)
+    
+        # Anti-parasite
+        elif stratégie == 2 :
             # Essaye de reculer si un robot adversaire se colle à lui
             if self.getObjectTypeAtSensor(0) == 2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
                 translation = -1
                 # Pour éviter de faire des agglutinements
                 if self.getObjectTypeAtSensor(7) == 2 and self.getRobotInfoAtSensor(7)['teamname'] == self.teamname :
                     translation = 1
-            elif self.getObjectTypeAtSensor(3) == 2 and self.getRobotInfoAtSensor(3)['teamname'] == self.teamname or self.getObjectTypeAtSensor(7) == 2 and self.getRobotInfoAtSensor(7)['teamname'] == self.teamname:
+            else :
+                # Evite les murs et les robots
+                for i in range(len(SensorBelt)):
+                        rotation += self.getObjectTypeAtSensor(i)
+    
+        #Longe les murs + anti-parasite
+        elif stratégie == 3 :
+            # Essaye de reculer si un robot adversaire se colle à lui
+            if self.getObjectTypeAtSensor(0) == 2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
+                translation = -1
+                # Pour éviter de faire des agglutinements
+                if self.getObjectTypeAtSensor(7) == 2 and self.getRobotInfoAtSensor(7)['teamname'] == self.teamname :
+                    translation = 1
+            elif self.getObjectTypeAtSensor(3) == 2 and self.getRobotInfoAtSensor(3)['teamname'] == self.teamname :
                     translation = -1
                     rotation = 1
             elif self.getObjectTypeAtSensor(1) == 1 and self.getObjectTypeAtSensor(2) == 0:
@@ -454,47 +459,17 @@ class AgentTypeB(object):
                 for i in range(len(SensorBelt)):
                     rotation += self.getObjectTypeAtSensor(i)
 
-
-        # ROBOT 3 : parasite
-
-        if self.id == 2 :
-            for i in range(len(SensorBelt)):
-                if self.getObjectTypeAtSensor(i) == 2 and self.getRobotInfoAtSensor(i)['teamname'] != self.teamname :
-                    rotation += (self.getObjectTypeAtSensor(i) & 2)*SensorBelt[i]
-                else :
-                    # Evite les murs
-                    rotation += self.getObjectTypeAtSensor(i)
-
-        # Télé-train + anti-parasite
-        if self.id == 3 :
-            if self.getObjectTypeAtSensor(7) != 1 and self.getObjectTypeAtSensor(0) != 1 :
-                params = [1, 0, 1, 1, 0, 1, 0, -1, -1, 0, 1, 1, 1, -1]
-
-                sensorMinus80 = self.getDistanceAtSensor(1)
-                sensorMinus40 = self.getDistanceAtSensor(2)
-                sensorMinus20 = self.getDistanceAtSensor(3)
-                sensorPlus20 = self.getDistanceAtSensor(4)
-                sensorPlus40 = self.getDistanceAtSensor(5)
-                sensorPlus80 = self.getDistanceAtSensor(6)
-
-                translation =  math.tanh( sensorMinus80 * params[0] + sensorMinus40 * params[1] + sensorMinus20 * params[2] + sensorPlus20 * params[3] + sensorPlus40 * params[4] + sensorPlus80 * params[5] + params[6]) 
-                rotation =  math.tanh( sensorMinus80 * params[7] + sensorMinus40 * params[8] + sensorMinus20 * params[9] + sensorPlus20 * params[10] + sensorPlus40 * params[11] + sensorPlus80 * params[12] + params[13] )
-            elif self.getObjectTypeAtSensor(0) == 2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
-                translation = -1
-            else :
-                translation = 1    
-
-        # Cas de base
-        else :
-            # 1 : Evite les murs et les robots
-            for i in range(len(SensorBelt)):
-                rotation += self.getObjectTypeAtSensor(i)
-            # 2 : Anti-parasite : Essaye de reculer si un robot adversaire se colle à lui
-            if self.getObjectTypeAtSensor(0) == 2 and self.getRobotInfoAtSensor(0)['teamname'] != self.teamname :
-                translation = -1
-                # Pour éviter de faire des agglutinements
-                if self.getObjectTypeAtSensor(7) == 2 and self.getRobotInfoAtSensor(7)['teamname'] == self.teamname :
+        # Télé           
+        elif stratégie == 4 :
+            if self.getObjectTypeAtSensor(3) == 1 or self.getObjectTypeAtSensor(4) == 1 or self.getObjectTypeAtSensor(1) == 1 or self.getObjectTypeAtSensor(0) == 1 :
+                n = randint(1,4)
+                if n == 4 :
                     translation = 1
+                    rotation = 1
+            else :
+                # Evite les murs et les robots
+                for i in range(len(SensorBelt)):
+                    rotation += self.getObjectTypeAtSensor(i)
     
         self.setRotationValue(rotation)
         self.setTranslationValue(translation)
